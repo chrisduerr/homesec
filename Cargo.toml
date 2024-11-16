@@ -1,0 +1,8 @@
+[package]
+name = "homesick"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+home = "0.5.9"
+rustix = { version = "0.38.40", features = ["mount", "thread", "process", "fs"] }
