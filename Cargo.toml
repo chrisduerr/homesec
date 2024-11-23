@@ -11,3 +11,9 @@ edition = "2021"
 [dependencies]
 home = "0.5.9"
 rustix = { version = "0.38.40", features = ["mount", "thread", "process", "fs"] }
+thiserror = "2.0.3"
+uuid = { version = "1.11.0", features = ["v4"] }
+xdg = "2.5.2"
+
+[build-dependencies]
+pkg-config = "0.3.31"
