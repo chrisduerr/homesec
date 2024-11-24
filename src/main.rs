@@ -99,12 +99,12 @@ fn create_home(path: &Path) -> io::Result<()> {
     // Map temporary directory over the target path.
     mount::mount2(None::<&str>, path, Some("tmpfs"), MountFlags::empty(), None)?;
 
-    // Copy X.Org files.
+    // Try to copy X.Org files.
     let mut old_home = PathBuf::from(WRITE_ROOT);
     for segment in path.iter().skip(1) {
         old_home.push(segment);
     }
-    fs::copy(old_home.join(".Xauthority"), path.join(".Xauthority"))?;
+    let _ = fs::copy(old_home.join(".Xauthority"), path.join(".Xauthority"));
 
     Ok(())
 }
