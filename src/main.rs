@@ -7,9 +7,6 @@ use rustix::thread::{Gid, Uid, UnshareFlags};
 
 mod namespaces;
 
-/// Location of the readonly root directory.
-const TEMPDIR: &str = "/tmp/homesick-root";
-
 /// Read-write location of the root directory inside the namespace.
 const WRITE_ROOT: &str = "/tmp/write-root";
 
@@ -25,7 +22,7 @@ fn main() {
     };
 
     // Create our target filesystem.
-    if let Err(err) = readonly_root(TEMPDIR) {
+    if let Err(err) = readonly_root() {
         eprintln!("Failed to create readonly root: {err}");
         process::exit(255);
     }
@@ -40,45 +37,37 @@ fn main() {
 
 /// Switch to a readonly version of the filesystem.
 ///
-/// This will create a new tmpfs at `target`, create a read-only bind mount of
-/// the existing filesystem, then pivot into it.
-///
 /// The old root will be mounted in read-write mode at [`WRITE_ROOT`] inside the
 /// new root, allowing manually persisting data to the filesystem.
-fn readonly_root(target: impl AsRef<Path>) -> io::Result<()> {
-    let target = target.as_ref();
-
+fn readonly_root() -> io::Result<()> {
     let home = home::home_dir();
     let euid = rustix::process::geteuid();
     let egid = rustix::process::getegid();
 
-    // Ensure target directory exists.
-    fs::create_dir_all(TEMPDIR)?;
-
     // Create a new user namespace to acquire mounting permissions.
     namespaces::create_user_namespace(Uid::ROOT, Gid::ROOT, UnshareFlags::NEWNS)?;
 
-    // Map a memory filesystem on top of the target directory.
-    mount::mount2(None::<&str>, target, Some("tmpfs"), MountFlags::empty(), None)?;
+    // Map an in-memory filesystem on top of the existing /tmp.
+    mount::mount2(None::<&str>, "/tmp", Some("tmpfs"), MountFlags::empty(), None)?;
 
-    // Bind mount old root to the new temporary filesystem.
-    mount::mount_recursive_bind("/", target)?;
+    // Bind mount old root to the new tmpfs.
+    mount::mount_recursive_bind("/", "/tmp")?;
 
     // Create a new memory filesystem to shadow the real /tmp.
-    mount::mount2(None::<&str>, target.join("tmp"), Some("tmpfs"), MountFlags::empty(), None)?;
+    mount::mount2(None::<&str>, "/tmp/tmp", Some("tmpfs"), MountFlags::empty(), None)?;
 
     // Create mount location for the old root directory.
-    let mut write_root = target.to_path_buf();
+    let mut write_root = PathBuf::from("/tmp");
     for segment in Path::new(WRITE_ROOT).iter().skip(1) {
         write_root.push(segment);
     }
     fs::create_dir(&write_root)?;
 
     // Change new root to be readonly.
-    mount::mount_remount(target, MountFlags::BIND | MountFlags::RDONLY, "")?;
+    mount::mount_remount("/tmp", MountFlags::BIND | MountFlags::RDONLY, "")?;
 
     // Switch to the new tmpfs filesystem root.
-    namespaces::pivot_root(target, &write_root)?;
+    namespaces::pivot_root("/tmp", &write_root)?;
 
     // Create fake home directory.
     if let Some(home) = home {

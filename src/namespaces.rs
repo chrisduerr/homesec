@@ -11,12 +11,12 @@ use rustix::thread::{self, Gid, Uid, UnshareFlags};
 /// Change root directory to `new_root` and mount the old root in `put_old`.
 ///
 /// The `put_old` directory must be at or underneath `new_root`.
-pub fn pivot_root(new_root: &Path, put_old: &Path) -> io::Result<()> {
+pub fn pivot_root(new_root: impl AsRef<Path>, put_old: impl AsRef<Path>) -> io::Result<()> {
     // Get target working directory path.
     let working_dir = env::current_dir().unwrap_or_else(|_| PathBuf::from("/"));
 
     // Move root to its new location.
-    rustix::process::pivot_root(new_root, put_old)?;
+    rustix::process::pivot_root(new_root.as_ref(), put_old.as_ref())?;
 
     // Attempt to recover working directory, or switch to root.
     //
