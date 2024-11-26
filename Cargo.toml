@@ -1,5 +1,5 @@
 [package]
-name = "homesick"
+name = "homesec"
 version = "0.1.0"
 description = "Run applications with an ephemeral home directory"
 authors = ["Christian Duerr <contact@christianduerr.com>"]
@@ -9,5 +9,7 @@ license = "GPL-3.0"
 edition = "2021"
 
 [dependencies]
+argh = "0.1.12"
 home = "0.5.9"
-rustix = { version = "0.38.40", features = ["mount", "thread", "process", "fs"] }
+rustix = { version = "0.38.40", features = ["mount", "thread", "process", "fs", "termios"] }
+xdg = "2.5.2"
